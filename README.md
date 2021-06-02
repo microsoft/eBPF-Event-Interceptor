@@ -1,14 +1,20 @@
-# Project
+# eBPF Event Interceptor
+Network Event Tracers for Linux using eBPF (BCC).
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+## Requirements
+* BPF Compiler Collection ([BCC](https://github.com/iovisor/bcc))<br>
+  The included `Cmake` sets up `BCC` for Ubuntu 20.04, 18.04 etc. If your distro is another flavor, [install BCC](https://github.com/iovisor/bcc/blob/master/INSTALL.md) as appropriate to your setup. 
+## Install and Compile
 
-As the maintainer of this project, please make a few updates:
+```bash 
+sudo apt install -y build-essential cmake
+git clone https://github.com/anumsft/linux-network-tracing-ebpf.git
+mkdir ebpfInterceptor/build && cd ebpfInterceptor/build 
+cmake ../
+make 
+sudo make install
+```
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
 
 ## Contributing
 
