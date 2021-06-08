@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC   -shared -Wl,-soname,libtcpEvent.so -o libtcpEvent.so CMakeFiles/tcpEvent.dir/event.cc.o  -pthread -lbcc 
