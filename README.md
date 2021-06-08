@@ -5,7 +5,10 @@ Network Event Tracers for Linux using eBPF (BCC).
 * BPF Compiler Collection ([BCC](https://github.com/iovisor/bcc))<br>
   The included `Cmake` sets up `BCC` for Ubuntu 20.04, 18.04 etc. If your distro is another flavor, [install BCC](https://github.com/iovisor/bcc/blob/master/INSTALL.md) as appropriate to your setup. 
 ## Install and Compile
-
+Requires `cmake`, setup on Ubuntu 20.04 as:
+```bash 
+sudo apt install -y build-essential cmake 
+```
 
 ```bash 
 git clone https://github.com/microsoft/eBPF-Event-Interceptor.git
@@ -14,7 +17,6 @@ cmake ../
 make 
 sudo make install
 ```
-
 
 ## Contributing
 
