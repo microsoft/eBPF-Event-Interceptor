@@ -7,7 +7,6 @@ Network Event Tracers for Linux using eBPF (BCC).
 ## Install and Compile
 
 ```bash 
-sudo apt install -y build-essential cmake
 git clone https://github.com/microsoft/eBPF-Event-Interceptor.git
 mkdir ebpfInterceptor/build && cd ebpfInterceptor/build 
 cmake ../
