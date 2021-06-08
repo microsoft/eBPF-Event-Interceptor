@@ -15,9 +15,14 @@ sudo apt install -y build-essential cmake
 git clone https://github.com/microsoft/eBPF-Event-Interceptor.git
 mkdir ebpfInterceptor/build && cd ebpfInterceptor/build 
 cmake ../
-make 
+make -j`nproc --ignore=1`
 sudo make install
 ```
+
+
+Available build options:
+
+    -DSETUP_TESTS=ON         Setup Tests. [default=OFF]
 
 ## Contributing
 
