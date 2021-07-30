@@ -43,7 +43,7 @@ std::vector < std::string > fNamesVector;
 ebpf::BPF bpf;
 struct udp_event_t toConsumer = { };
 
-const char *version = "UDP Tracer Ver 1.03b";
+const char *version = "UDP Tracer Ver 1.03c";
 
 //--------------//
 // Definitions  //
@@ -93,7 +93,7 @@ static void bpfHelper(struct event_t *eventPtr){
 		eventPtr->pid = bpf_get_current_pid_tgid() >> 32;
 	}
 	if (!eventPtr->UserId){
-		eventPtr->UserId = bpf_get_current_uid_gid() >> 32;
+		eventPtr->UserId = bpf_get_current_uid_gid() & 0xffffffff; // take the first 32 bits. 
 	}
 
 	if (!eventPtr->EventTime){

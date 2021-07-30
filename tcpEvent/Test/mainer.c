@@ -57,7 +57,7 @@ BPF_HASH(whoami, struct sock *, struct id_t);
 
 int kprobe__tcp_set_state(struct pt_regs *ctx, struct sock *sk, int state) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u32 uid =  bpf_get_current_uid_gid() >> 32;
+    u32 uid =  bpf_get_current_uid_gid() & 0xffffffff;
 
     u16 lport = sk->__sk_common.skc_num;
     u16 dport = sk->__sk_common.skc_dport;
@@ -119,7 +119,7 @@ int kprobe__tcp_set_state(struct pt_regs *ctx, struct sock *sk, int state) {
     event.DPT = ntohs(dport);
     if (mep == 0) {
         bpf_get_current_comm(&event.task, sizeof(event.task));
-        event.uid =  bpf_get_current_uid_gid() >> 32; /* this is the best we can do here */
+        event.uid =  bpf_get_current_uid_gid() & 0xffffffff; // take the 1st 32 bits for uid. 
     } else {
         bpf_probe_read(&event.task, sizeof(event.task), (void *)mep->task);
     }
