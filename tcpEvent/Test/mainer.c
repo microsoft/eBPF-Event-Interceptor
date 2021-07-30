@@ -169,13 +169,27 @@ int main() {
 		fprintf(stderr, "%s\n", error);
 		exit(EXIT_FAILURE);
 	}
+
+        dlerror();              /* Clear any existing error */
+	unsigned (*getStatus)() = dlsym(handle, "getStatus");
+        error = dlerror();
+        if (error) {
+                fprintf(stderr, "%s (err resolving symbol getStatus)\n", error);
+                exit(EXIT_FAILURE);
+        }
+
 	signal(SIGINT, signalHandler);
 
 	puts("About to AddProbe");
 	AddProbe(BPF_PROGRAM);
 	puts("AddProbe done!");
 
-	struct tcp_event_t eventThingy;
+	while(!getStatus()){
+		puts("Waiting on getStatus()..");
+		sleep(1);
+	}
+
+	struct tcp_event_t eventThingy = {0};
 	struct tcp_event_t *event = 0;
 	while (1) {
 		eventThingy = DequeuePerfEvent();

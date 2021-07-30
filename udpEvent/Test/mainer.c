@@ -57,15 +57,26 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
+        dlerror();              /* Clear any existing error */
+	unsigned (*getStatus)() = dlsym(handle, "getStatus");
+        err = dlerror();
+        if (err) {
+                fprintf(stderr, "%s (err resolving symbol getStatus)\n", err);
+                exit(EXIT_FAILURE);
+        }
 
-	
 	signal(SIGINT, signalHandler);
 
 	puts("About to AddProbe");
 	AddProbe();
 	puts("AddProbe done!");
 
-	struct udp_event_t mainerEvent;
+	while(!getStatus()){
+		puts("Waiting on getStatus()..");
+		sleep(1);
+	}
+
+	struct udp_event_t mainerEvent = {0};
 	while (1) {
 		mainerEvent = DequeuePerfEvent();
 		printEvent(&mainerEvent);

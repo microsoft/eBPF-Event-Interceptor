@@ -22,10 +22,10 @@ int setupBPF();
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 	extern void AddProbe();
 	struct udp_event_t DequeuePerfEvent();
 	extern void cleanup();
+	extern unsigned getStatus();
 
 #ifdef __cplusplus
 }
@@ -38,19 +38,21 @@ uint64_t notSoLongAgo = 0;
 pthread_t tid = 0;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 std::deque < event_t * >eventDeque;
 std::vector < std::string > fNamesVector;
 ebpf::BPF bpf;
 struct udp_event_t toConsumer = { };
+unsigned status = 0;
 
-const char *version = "UDP Tracer Ver 1.03c";
+const char *version = "UDP Tracer Ver 1.03e";
 
 //--------------//
 // Definitions  //
 //--------------//
 #define MAX 8192
 #define UPTIME "/proc/uptime"
-#define MAXQSIZE 100
+#define MAXQSIZE 1024
 #define FN_NAME "deleteME"
 
 const char *BPF_PROGRAM = R"(
@@ -489,12 +491,24 @@ int setupBPF() {
 		return 1;
 	}
 
+
+	pthread_rwlock_wrlock(&rwlock);
+	status++;
+	pthread_rwlock_unlock(&rwlock);
+
 	puts("Tracing, press \"CtrlC\" to terminate..");
 	while (1) {
 		bpf.poll_perf_buffer("bpfPerfBuffer");
 	}
 
 	return 0;
+}
+
+unsigned getStatus() {
+	pthread_rwlock_rdlock(&rwlock);
+	auto x = status;
+	pthread_rwlock_unlock(&rwlock);
+	return x;
 }
 
 void handle_output(void *cb_cookie, void *data, int data_size) {
@@ -513,7 +527,7 @@ void handle_output(void *cb_cookie, void *data, int data_size) {
 		pthread_mutex_unlock(&mtx);
 		pthread_cond_signal(&cond);
 		if (shed) {
-			puts("Shedding events..");
+			puts("Shedding UDP events..");
 		}
 	}
 }

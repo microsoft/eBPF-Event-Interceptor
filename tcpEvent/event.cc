@@ -22,7 +22,7 @@
 #include <linux/rtnetlink.h>
 #include <time.h>
 
-#define MAXQSIZE 100
+#define MAXQSIZE 1024
 #define PROTOSIZE 2
 
 // Global Vars 
@@ -38,13 +38,15 @@ int socketFDArray[15] = { 0 };
 int intProtos[PROTOSIZE] = { AF_INET, AF_INET6 };
 char charProtos[][16] = { "AF_INET", "AF_INET6" };
 struct tcp_event_t toConsumer = { };
+unsigned status = 0;
 
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;;
 pthread_mutex_t mapMu = PTHREAD_MUTEX_INITIALIZER;;
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 char slash[] = "/";
-char version[] = "tcpTracer Ver 1.03a";
+char version[] = "tcpTracer Ver 1.03d";
 
 // proto types
 int sendDiagMsg(int nlSocket, int family);
@@ -80,6 +82,7 @@ void handle_output(void *cb_cookie, void *data, int data_size) {
 		pthread_cond_signal(&cond);
 		if (shed) {
 			destroyEventPtr(almostGone);
+			puts("Shedding TCP events..");
 		}
 	}
 }
@@ -206,6 +209,10 @@ int setupBPF(const char *BPF_PROGRAM) {
 		return 1;
 	}
 
+	pthread_rwlock_wrlock(&rwlock);
+	status++;
+	pthread_rwlock_unlock(&rwlock);
+
 	puts("Tracing, press \"CtrlC\" to terminate..");
 	while (1) {
 		bpf.poll_perf_buffer(TABLE);
@@ -214,6 +221,14 @@ int setupBPF(const char *BPF_PROGRAM) {
 	cleanup();
 
 	return 0;
+}
+
+
+unsigned getStatus() {
+	pthread_rwlock_rdlock(&rwlock);
+	auto x = status;
+	pthread_rwlock_unlock(&rwlock);
+	return x;
 }
 
 void cleanup() {
