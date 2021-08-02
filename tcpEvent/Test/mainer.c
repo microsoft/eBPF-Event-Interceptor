@@ -10,7 +10,8 @@
 
 #include "../common.h"
 
-#define SOFILE "/usr/local/lib/libtcpEvent.so"
+#define SOFILE "/opt/RealTimeKql/lib/libtcpEvent.so"
+char *version = "TCP mainer Ver 1.03a";
 
 //prototypes
 void printEvent(struct tcp_event_t *event);
@@ -137,7 +138,8 @@ int kprobe__tcp_set_state(struct pt_regs *ctx, struct sock *sk, int state) {
 )";
 
 int main() {
-	printf("C mainer PID: %d\n", getpid());
+	printf("%s PID: %d\n", version, getpid());
+	printf("dlopen: %s\n", SOFILE);
 	void *handle = dlopen(SOFILE, RTLD_LAZY);
 	if (handle) {
 		puts("dlopen OK!");

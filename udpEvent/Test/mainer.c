@@ -10,8 +10,8 @@
 #include <time.h>
 #include <signal.h>
 
-#define SOFILE "/usr/local/lib/libudpEvent.so"
-#define VERSION "udp mainer ver 1.03a"
+#define SOFILE "/opt/RealTimeKql/lib/libudpEvent.so"
+#define VERSION "udp mainer ver 1.03b"
 
 #include "../common.h"
 
@@ -25,6 +25,7 @@ void *handle = 0;
 
 int main() {
 	printf("%s PID: %d\n", VERSION, getpid());
+        printf("dlopen: %s\n", SOFILE);
 	handle = dlopen(SOFILE, RTLD_LAZY);
 	if (handle) {
 		puts("dlopen OK!");

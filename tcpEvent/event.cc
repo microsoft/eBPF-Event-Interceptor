@@ -46,7 +46,7 @@ pthread_mutex_t mapMu = PTHREAD_MUTEX_INITIALIZER;;
 pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 char slash[] = "/";
-char version[] = "tcpTracer Ver 1.03d";
+char version[] = "tcpTracer Ver 1.03e";
 
 // proto types
 int sendDiagMsg(int nlSocket, int family);
@@ -531,7 +531,7 @@ void parseReply(struct inet_diag_msg *reply, int rtalen) {
 	pthread_mutex_unlock(&mtx);
 
 	if (curSize > MAXQSIZE) {
-		puts("at capacity!");
+		puts("Shedding TCP (Netlink) events..");
 		return;
 	}
 
