@@ -45,7 +45,7 @@ ebpf::BPF bpf;
 struct udp_event_t toConsumer = { };
 unsigned status = 0;
 
-const char *version = "UDP Tracer Ver 1.03e";
+const char *version = "UDP Tracer Ver 1.04b";
 
 //--------------//
 // Definitions  //
@@ -75,12 +75,13 @@ struct event_t{
 	unsigned __int128 daddr;
 	u64 rx_b;
 	u64 tx_b;
+	u32 rxPkts;
+	u32 txPkts;
 	uintptr_t sockPtr;
 };
 #pragma pack(pop)
 
 BPF_PERF_OUTPUT(bpfPerfBuffer);   
-BPF_HASH(udpHash, struct sock *, struct event_t);
 BPF_HASH(magic, u64, unsigned long);
 BPF_HASH(otherHash, uintptr_t, struct event_t);
 
@@ -152,16 +153,14 @@ static void skHelper(struct pt_regs *ctx, struct event_t * eventPtr, struct sock
 	}
 
 	bpfPerfBuffer.perf_submit(ctx, eventPtr, sizeof(*eventPtr));
-	//udpHash.update(&sk, eventPtr);
 	otherHash.update(&eventPtr->sockPtr, eventPtr);
 }
 
 
 int kprobe_ip4_datagram_connect(struct pt_regs *ctx, struct sock *sk){
-	struct event_t event = { 0 };
+	struct event_t event = {};
 	bpfHelper(&event);
 	skHelper(ctx, &event, sk);
-	//udpHash.update(&sk, &event);
 	otherHash.update(&event.sockPtr,&event);
 	if (debug){
 		bpf_trace_printk("kprobe_ip4_datagram_connect\n");
@@ -170,10 +169,9 @@ int kprobe_ip4_datagram_connect(struct pt_regs *ctx, struct sock *sk){
 }
 
 int kprobe_ip6_datagram_connect(struct pt_regs *ctx, struct sock *sk){
-	struct event_t event = { 0 };
+	struct event_t event = {};
 	bpfHelper(&event);
 	skHelper(ctx, &event, sk);
-	//udpHash.update(&sk, &event);
 	otherHash.update(&event.sockPtr,&event);
 	if (debug){
 		bpf_trace_printk("kprobe_ip6_datagram_connect\n");
@@ -185,21 +183,19 @@ int kprobe_udp_destruct_sock(struct pt_regs *ctx, struct sock *sk){
         struct event_t *eventPtr = 0; 
 	uintptr_t pointerInt = (uintptr_t)sk;
         eventPtr = otherHash.lookup(&pointerInt);
-        //eventPtr = udpHash.lookup(&sk);
         if (eventPtr){
 		bpfHelper(eventPtr);
 		skHelper(ctx, eventPtr, sk);
 		if (eventPtr->pid){
 			bpfPerfBuffer.perf_submit(ctx, eventPtr, sizeof(*eventPtr));
-			udpHash.delete(&sk);
+			otherHash.delete(&sk);
 		}
 	} else {
 		// new event - we have not seen this before.
-		struct event_t event = { 0 };
+		struct event_t event = { };
 		event.sockPtr = pointerInt;
 		bpfHelper(&event);
 		skHelper(ctx, &event, sk);
-		//udpHash.update(&sk, &event);
 		otherHash.update(&event.sockPtr,&event);
 	}
 	if (debug){
@@ -220,13 +216,12 @@ int kprobe_udp_recvmsg(struct pt_regs *ctx, struct sock *sk){
 		bpfHelper(eventPtr);
 		skHelper(ctx, eventPtr, sk);
 		bpfPerfBuffer.perf_submit(ctx, eventPtr, sizeof(*eventPtr));
-		udpHash.delete(&sk);
 		otherHash.delete(&pointerInt);
 	} else {
 		if (debug){
 			bpf_trace_printk("new event in kprobe_udp_recvmsg\n");
 		}
-		struct event_t event = { 0 };
+		struct event_t event = { };
 		event.sockPtr = pointerInt;
 		bpfHelper(&event);
 		skHelper(ctx, &event, sk);
@@ -252,6 +247,7 @@ int kretprobe__udp_recvmsg(struct pt_regs *ctx){
 
 			if (eventPtr){
 				eventPtr->rx_b += ret;
+				eventPtr->rxPkts += 1;
 				bpfHelper(eventPtr);
 				skHelper(ctx, eventPtr, sk);
 			}
@@ -281,7 +277,7 @@ int kprobe__udpv6_recvmsg(struct pt_regs *ctx, struct sock *sk){
 		otherHash.update(&eventPtr->sockPtr,eventPtr);
 	} else {
 		// fallback to this.
-		struct event_t event = { 0 };
+		struct event_t event = { };
 		eventPtr = &event;
 
 		bpfHelper(eventPtr);
@@ -310,6 +306,7 @@ int kretprobe__udpv6_recvmsg(struct pt_regs *ctx){
 
                         if (eventPtr){
                                 eventPtr->rx_b += ret;
+                                eventPtr->rxPkts += 1;
                                 bpfHelper(eventPtr);
                                 skHelper(ctx, eventPtr, sockPtr); // derived.
 				otherHash.update(&eventPtr->sockPtr,eventPtr);
@@ -331,22 +328,21 @@ int kprobe__udpv6_sendmsg(struct pt_regs *ctx, struct sock *sk, struct msghdr *m
 
 	uintptr_t pointerInt = (uintptr_t)sk;
         eventPtr = otherHash.lookup(&pointerInt);
-        //eventPtr = udpHash.lookup(&sk);
         if (eventPtr){
 		eventPtr->tx_b += len;
+                eventPtr->txPkts += 1;
 		bpfHelper(eventPtr);
 		skHelper(ctx, eventPtr, sk);
 		bpfPerfBuffer.perf_submit(ctx, eventPtr, sizeof(*eventPtr));
 		if (debug){
 			bpf_trace_printk("kprobe__udpv6_sendmsg pid: %d sent %d bytes\n", eventPtr->pid, len);
 		}
-			// are we done with this socket?
-			//udpHash.delete(&sk);
 	} else {
 		// new event - we have not seen this before.
-		struct event_t event = { 0 };
+		struct event_t event = {};
 		event.sockPtr = pointerInt;
 		event.tx_b += len;
+		event.txPkts += 1;
 		bpfHelper(&event);
 		skHelper(ctx, &event, sk);
 		otherHash.update(&event.sockPtr,&event);
@@ -362,22 +358,21 @@ int kprobe__udp_sendmsg(struct pt_regs *ctx, struct sock *sk, struct msghdr *msg
 
 	uintptr_t pointerInt = (uintptr_t)sk;
         eventPtr = otherHash.lookup(&pointerInt);
-        //eventPtr = udpHash.lookup(&sk);
         if (eventPtr){
 		eventPtr->tx_b += len;
+		eventPtr->txPkts += 1;
 		bpfHelper(eventPtr);
 		skHelper(ctx, eventPtr, sk);
 		bpfPerfBuffer.perf_submit(ctx, eventPtr, sizeof(*eventPtr));
 		if (debug){
 			bpf_trace_printk("kprobe__udp_sendmsg pid: %d sent %d bytes\n", eventPtr->pid, len);
 		}
-			// are we done with this socket?
-			//udpHash.delete(&sk);
 	} else {
 		// new event - we have not seen this before.
-		struct event_t event = { 0 };
+		struct event_t event = {};
 		event.sockPtr = pointerInt;
 		event.tx_b += len;
+		event.txPkts += 1;
 		bpfHelper(&event);
 		skHelper(ctx, &event, sk);
 		otherHash.update(&event.sockPtr,&event);
@@ -550,6 +545,8 @@ struct udp_event_t DequeuePerfEvent() {
 			toConsumer.UserId = event->UserId;
 			toConsumer.rx_b = event->rx_b;
 			toConsumer.tx_b = event->tx_b;
+			toConsumer.rxPkts = event->rxPkts;
+			toConsumer.txPkts = event->txPkts;
 			toConsumer.family = event->family;
 			toConsumer.SPT = event->SPT;
 			toConsumer.DPT = event->DPT;

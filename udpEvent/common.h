@@ -12,6 +12,8 @@ struct udp_event_t {
         char task[16];
         uint64_t rx_b;
         uint64_t tx_b;
+	uint32_t rxPkts;
+	uint32_t txPkts;
         char SADDR[64];
         char DADDR[64];
 };
@@ -32,6 +34,8 @@ struct event_t {
         unsigned __int128 daddr;
         uint64_t rx_b;
         uint64_t tx_b;
+	uint32_t rxPkts;
+	uint32_t txPkts;
 	uintptr_t sockPtr;
 };
 #pragma pack(pop)

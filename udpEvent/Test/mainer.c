@@ -106,6 +106,8 @@ void printEvent(struct udp_event_t *event) {
 	printf(" ---> family: %d\n", event->family);
 	printf(" ---> rx_b: %lu\n", event->rx_b);
 	printf(" ---> tx_b: %lu\n", event->tx_b);
+	printf(" ---> rxPkts: %u\n", event->rxPkts);
+	printf(" ---> txPkts: %u\n", event->txPkts);
 	printf(" ---> Command: %s\n", event->task);
 	printf(" ---> SADDR: %s\n", event->SADDR);
 	printf(" ---> DADDR: %s\n", event->DADDR);
