@@ -2,14 +2,13 @@
 #ifndef NETLINKFILTER_H
 #define NETLINKFILTER_H
 
-#define NETLINKFILTER_VER "1.03a"
+#define NETLINKFILTER_VER "1.03b"
 
 #define SUPPRESS 0
 #define PROCESS 1
 #define WONKY -1 
 #define MAXKEYLEN 1024
 #define ADDRLEN 128
-#define RESET_COUNT 300
 
 struct nlfStruct {
 
@@ -39,10 +38,10 @@ struct nlfStruct {
 		uint64_t incomingVal = eventPtr->rx_b + eventPtr->tx_b + eventPtr->tcpi_segs_out + eventPtr->tcpi_segs_in;
 
 		// lhs | rhs 
-		// SPT:DPT:saddr:daddr | incomingVal
+		// SPT:DPT:saddr:daddr:pid | incomingVal
 
 		char key[MAXKEYLEN] = { };
-		snprintf(key, MAXKEYLEN, "%d:%d:%s:%s", eventPtr->SPT, eventPtr->DPT, saddr, daddr);
+		snprintf(key, MAXKEYLEN, "%d:%d:%s:%s:[%d]", eventPtr->SPT, eventPtr->DPT, saddr, daddr, eventPtr->pid);
 
 		auto keyString = std::string(key);
 
@@ -58,15 +57,6 @@ struct nlfStruct {
 
 		// still here? that means: new event, or a previously known event sparkling with new activity:
 		pthread_rwlock_wrlock(&lock);
-
-		if (lookupCount > RESET_COUNT){
-			printf("[%s] Resetting nfMap\n", __func__);
-			nfMap.clear();
-			lookupCount = 0;
-		} else {
-			lookupCount++;
-		}
-
 		nfMap[keyString] = incomingVal;
 		pthread_rwlock_unlock(&lock);
 		printf("[%s] new event: %s:%ld\n", __func__, key, value);
@@ -76,7 +66,6 @@ struct nlfStruct {
  private:
 	pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 	std::map < std::string, uint64_t > nfMap;
-	unsigned lookupCount = 0;
 };
 
 #endif
