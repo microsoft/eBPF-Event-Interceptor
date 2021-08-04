@@ -35,8 +35,8 @@ struct nlfStruct {
 		// lhs | rhs 
 		// SPT:DPT:saddr:daddr | incomingVal
 
-		char key[_FMAX] = { };
-		snprintf(key, _FMAX, "%d:%d:%s:%s", eventPtr->SPT, eventPtr->DPT, saddr, daddr);
+		char key[_MAXKEYLEN] = { };
+		snprintf(key, _MAXKEYLEN, "%d:%d:%s:%s", eventPtr->SPT, eventPtr->DPT, saddr, daddr);
 
 		auto keyString = std::string(key);
 
@@ -63,7 +63,7 @@ struct nlfStruct {
  private:
 	pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 	std::map < std::string, uint64_t > nfMap;
-	const int _FMAX = 8192;
+	const int _MAXKEYLEN = 8192;
 	const int _ADDRLEN = 128;
 };
 
