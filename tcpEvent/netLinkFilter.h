@@ -2,18 +2,23 @@
 #ifndef NETLINKFILTER_H
 #define NETLINKFILTER_H
 
+#define NETLINKFILTER_VER "1.03a"
+
+#define SUPPRESS 0
+#define PROCESS 1
+#define WONKY -1 
+#define MAXKEYLEN 1024
+#define ADDRLEN 128
+
 struct nlfStruct {
 
-	// return 0 if we know the exact state from before. this event must be suppressed.
-	// return 1 if our state is stale. process this event. 
-	// if wonky, return -1. 
 	int checkEvent(event_t * eventPtr) {
 		if (!eventPtr) {
-			return -1;
+			return WONKY;
 		}
 
-		char saddr[_ADDRLEN] = { };
-		char daddr[_ADDRLEN] = { };
+		char saddr[ADDRLEN] = { };
+		char daddr[ADDRLEN] = { };
 
 		switch (eventPtr->family) {
 		case AF_INET:
@@ -26,7 +31,7 @@ struct nlfStruct {
 			break;
 		default:
 			fprintf(stderr, "Unknown inet family: %d\n", eventPtr->family);
-			return -1;	// we cannot deal with this.
+			return WONKY;	// we cannot deal with this.
 		}
 
 		// presently: 
@@ -35,8 +40,8 @@ struct nlfStruct {
 		// lhs | rhs 
 		// SPT:DPT:saddr:daddr | incomingVal
 
-		char key[_MAXKEYLEN] = { };
-		snprintf(key, _MAXKEYLEN, "%d:%d:%s:%s", eventPtr->SPT, eventPtr->DPT, saddr, daddr);
+		char key[MAXKEYLEN] = { };
+		snprintf(key, MAXKEYLEN, "%d:%d:%s:%s", eventPtr->SPT, eventPtr->DPT, saddr, daddr);
 
 		auto keyString = std::string(key);
 
@@ -47,24 +52,20 @@ struct nlfStruct {
 
 		if (found && value == incomingVal) {
 			printf("[%s] stale event: %s:%ld\n", __func__, key, value);
-			return 0;	// we have the exact state.
-		} else {
-			// new event, or known event with new activity:
-			pthread_rwlock_wrlock(&lock);
-			nfMap[keyString] = incomingVal;
-			pthread_rwlock_unlock(&lock);
-			printf("[%s] new event: %s:%ld\n", __func__, key, value);
-			return 1;
-		}
+			return SUPPRESS;
+		} 
 
-		return 1;	// we have not seen this before.
+		// still here? that means: new event, or a previously known event sparkling with new activity:
+		pthread_rwlock_wrlock(&lock);
+		nfMap[keyString] = incomingVal;
+		pthread_rwlock_unlock(&lock);
+		printf("[%s] new event: %s:%ld\n", __func__, key, value);
+		return PROCESS;
 	}
 
  private:
 	pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 	std::map < std::string, uint64_t > nfMap;
-	const int _MAXKEYLEN = 8192;
-	const int _ADDRLEN = 128;
 };
 
 #endif
