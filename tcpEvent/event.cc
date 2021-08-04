@@ -14,6 +14,7 @@
 #include "bcc_version.h"
 #include "BPF.h"
 #include "event.h"
+#include "netLinkFilter.h"
 
 #include <linux/netlink.h>
 #include <linux/sock_diag.h>
@@ -38,7 +39,9 @@ int socketFDArray[15] = { 0 };
 int intProtos[PROTOSIZE] = { AF_INET, AF_INET6 };
 char charProtos[][16] = { "AF_INET", "AF_INET6" };
 struct tcp_event_t toConsumer = { };
+
 unsigned status = 0;
+struct nlfStruct nlFilter = { };
 
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;;
@@ -46,7 +49,7 @@ pthread_mutex_t mapMu = PTHREAD_MUTEX_INITIALIZER;;
 pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 char slash[] = "/";
-char version[] = "tcpTracer Ver 1.03e";
+char version[] = "tcpTracer Ver 1.03f";
 
 // proto types
 int sendDiagMsg(int nlSocket, int family);
@@ -223,7 +226,6 @@ int setupBPF(const char *BPF_PROGRAM) {
 	return 0;
 }
 
-
 unsigned getStatus() {
 	pthread_rwlock_rdlock(&rwlock);
 	auto x = status;
@@ -245,7 +247,7 @@ void cleanup() {
 	}
 	puts("--> bpf.detach_kprobe OK");
 
-	if (netLinkTid){
+	if (netLinkTid) {
 		puts("--> Cancelling netLinkTid");
 		pthread_cancel(netLinkTid);
 	}
@@ -573,21 +575,21 @@ void parseReply(struct inet_diag_msg *reply, int rtalen) {
 	netlinkEvent->family = reply->idiag_family;
 
 	/*
-           struct inet_diag_sockid {
-               __be16  idiag_sport;
-               __be16  idiag_dport;
-               __be32  idiag_src[4];
-               __be32  idiag_dst[4];
-               __u32   idiag_if;
-               __u32   idiag_cookie[2];
-           };
+	   struct inet_diag_sockid {
+	   __be16  idiag_sport;
+	   __be16  idiag_dport;
+	   __be32  idiag_src[4];
+	   __be32  idiag_dst[4];
+	   __u32   idiag_if;
+	   __u32   idiag_cookie[2];
+	   };
 
-	  if ipv4, src address is idiag_src[0], 32 bit ipv4 address
-	  if ipv6, src address is idiag_src[0,1,2,3] and is 128 bits long 
+	   if ipv4, src address is idiag_src[0], 32 bit ipv4 address
+	   if ipv6, src address is idiag_src[0,1,2,3] and is 128 bits long 
 
-	*/
+	 */
 
-	switch (netlinkEvent->family){
+	switch (netlinkEvent->family) {
 	case AF_INET6:
 		// ipv6 address is 16 bytes, 16 * 8 = 128bits
 		memcpy(&netlinkEvent->saddr, reply->id.idiag_src, 16);
@@ -622,6 +624,15 @@ void parseReply(struct inet_diag_msg *reply, int rtalen) {
 			routeAttributes = RTA_NEXT(routeAttributes, rtalen);
 		}
 
+	}
+
+	if (ok) {
+		int nFStat = nlFilter.checkEvent(netlinkEvent);
+		if (!nFStat) {
+			printf("[%s] Suppressing NetLink Event\n", __func__);
+			ok = 0;
+		}
+		printf("[%s] nFStat: %d\n", __func__, nFStat);
 	}
 
  EndofRunWay:
