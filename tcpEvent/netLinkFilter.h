@@ -9,6 +9,7 @@
 #define WONKY -1 
 #define MAXKEYLEN 1024
 #define ADDRLEN 128
+#define RESET_COUNT 300
 
 struct nlfStruct {
 
@@ -57,6 +58,15 @@ struct nlfStruct {
 
 		// still here? that means: new event, or a previously known event sparkling with new activity:
 		pthread_rwlock_wrlock(&lock);
+
+		if (lookupCount > RESET_COUNT){
+			printf("[%s] Resetting nfMap\n", __func__);
+			nfMap.clear();
+			lookupCount = 0;
+		} else {
+			lookupCount++;
+		}
+
 		nfMap[keyString] = incomingVal;
 		pthread_rwlock_unlock(&lock);
 		printf("[%s] new event: %s:%ld\n", __func__, key, value);
@@ -66,6 +76,7 @@ struct nlfStruct {
  private:
 	pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 	std::map < std::string, uint64_t > nfMap;
+	unsigned lookupCount = 0;
 };
 
 #endif
