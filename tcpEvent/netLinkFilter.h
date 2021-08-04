@@ -9,6 +9,7 @@
 #define WONKY -1 
 #define MAXKEYLEN 1024
 #define ADDRLEN 128
+#define NF_MAP_MAXLEN 300
 
 struct nlfStruct {
 
@@ -56,9 +57,22 @@ struct nlfStruct {
 		} 
 
 		// still here? that means: new event, or a previously known event sparkling with new activity:
+
+		int x = 0;
+
 		pthread_rwlock_wrlock(&lock);
+		// check the Map from growing too big:
+		if (nfMap.size() > NF_MAP_MAXLEN){
+			x++;
+			nfMap.clear();
+		}
 		nfMap[keyString] = incomingVal;
 		pthread_rwlock_unlock(&lock);
+		
+		if (x){
+			printf("[%s] NF_MAP_MAXLEN: emptying nfMap\n", __func__);
+		}
+			
 		printf("[%s] new event: %s:%ld\n", __func__, key, value);
 		return PROCESS;
 	}
