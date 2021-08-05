@@ -55,9 +55,37 @@ Install the project...
 Running Tests:
 ```bash 
 $ sudo /tmp/tcpEventTest
-  ...
+<snip>
+ ---> PID: 1177932
+ ---> UID: 1000
+ ---> rx_b: 2988
+ ---> tx_b: 3301
+ ---> tcpi_segs_out: 20
+ ---> tcpi_segs_in: 18
+ ---> Command: ssh
+ ---> SADDR: 2001:aaa:fff:eee:ccc:a627:f45f:9c0c
+ ---> DADDR: 2601:xxx:yyy:zzz:aaa:db60:46cd:971c
+ ---> SPT: 58532
+ ---> DPT: 22
+ ---> EventTime: 1628184562000000000
+<snip>
+
 $ sudo /tmp/udpEventTest
-  ...
+<snip>
+ ---> PID: 1180210
+ ---> UID: 1000
+ ---> family: 10
+ ---> rx_b: 0
+ ---> tx_b: 32
+ ---> rxPkts: 0
+ ---> txPkts: 1
+ ---> Command: udpTraffic.sh
+ ---> SADDR: 2001:xxx:f0:5e:aaa:a627:f45f:9c0c
+ ---> DADDR: 2001:xxx:f0:5e:bbb:8d6f:32ef:6180
+ ---> SPT: 42486
+ ---> DPT: 53
+ ---> EventTime: 1628185427077225859
+<snip>
 ```
 ## Contributing
 
