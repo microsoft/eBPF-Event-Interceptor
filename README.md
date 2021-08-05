@@ -24,6 +24,41 @@ Available build options:
 
     -DSETUP_TESTS=ON         Setup Tests. [default=OFF]
 
+### Test builds:
+```
+$  cmake -DSETUP_TESTS=ON ../ && make -j`nproc --ignore=1` && sudo make install
+Found BCC
+tcp Interceptor
+Setting up Tests
+test tcp Interceptor
+udp Interceptor
+Setting up Tests for UDP Tracer
+test udp Interceptor
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/anu/git/msft/eBPF-Event-Interceptor/build
+[ 50%] Built target tcpEvent
+[ 50%] Built target udpEvent
+[100%] Built target udpEventTest
+[100%] Built target tcpEventTest
+[ 25%] Built target tcpEvent
+[ 50%] Built target tcpEventTest
+[ 75%] Built target udpEvent
+[100%] Built target udpEventTest
+Install the project...
+-- Install configuration: ""
+-- Up-to-date: /opt/RealTimeKql/lib/libtcpEvent.so
+-- Up-to-date: /tmp/tcpEventTest
+-- Up-to-date: /opt/RealTimeKql/lib/libudpEvent.so
+-- Up-to-date: /tmp/udpEventTest
+```
+Running Tests:
+```bash 
+$ sudo /tmp/tcpEventTest
+  ...
+$ sudo /tmp/udpEventTest
+  ...
+```
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
